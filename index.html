@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>Food Nutrition Analyzer</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            background: #f4f7f5;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 500px;
+            padding: 30px;
+            text-align: center;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 4px 18px rgba(0, 0, 0, 0.12);
+        }
+
+        h1 {
+            margin-top: 0;
+            color: #218838;
+        }
+
+        p {
+            color: #555;
+            line-height: 1.5;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            margin-top: 15px;
+            padding: 13px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            font-size: 16px;
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #28a745;
+        }
+
+        button {
+            width: 100%;
+            margin-top: 20px;
+            padding: 13px;
+            border: none;
+            border-radius: 8px;
+            background: #28a745;
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #218838;
+        }
+
+        button:disabled {
+            background: #999;
+            cursor: not-allowed;
+        }
+
+        #result {
+            min-height: 60px;
+            margin-top: 25px;
+            padding: 18px;
+            border-radius: 10px;
+            background: #f1f1f1;
+            color: #333;
+            line-height: 1.8;
+            text-align: left;
+        }
+
+        .success {
+            color: #145a32;
+        }
+
+        .error {
+            color: #b00020;
+        }
+
+        .note {
+            margin-top: 18px;
+            color: #777;
+            font-size: 13px;
+        }
+    </style>
+</head>
+
+<body>
+    <main class="container">
+        <h1>🍽 Food Nutrition Analyzer</h1>
+
+        <p>
+            Enter a food name to view its estimated nutritional values.
+        </p>
+
+        <input
+            type="text"
+            id="foodName"
+            placeholder="Example: apple, rice, banana"
+        >
+
+        <button id="analyzeButton">
+            Analyze Food
+        </button>
+
+        <div id="result">
+            Enter a food name to begin.
+        </div>
+
+        <p class="note">
+            Values are estimates and may vary depending on serving size
+            and preparation method.
+        </p>
+    </main>
+
+    <script>
+        const foodNameInput = document.getElementById("foodName");
+        const analyzeButton = document.getElementById("analyzeButton");
+        const result = document.getElementById("result");
+
+        analyzeButton.addEventListener("click", analyzeFood);
+
+        foodNameInput.addEventListener("keydown", (event) => {
+            if (event.key === "Enter") {
+                analyzeFood();
+            }
+        });
+
+        async function analyzeFood() {
+            const foodName = foodNameInput.value.trim();
+
+            if (!foodName) {
+                showError("Please enter a food name.");
+                foodNameInput.focus();
+                return;
+            }
+
+            analyzeButton.disabled = true;
+            analyzeButton.textContent = "Analyzing...";
+            result.className = "";
+            result.textContent = "⏳ Searching nutrition information...";
+
+            try {
+                const response = await fetch(
+                    "http://localhost:3000/analyze",
+                    {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json"
+                        },
+                        body: JSON.stringify({
+                            food_name: foodName
+                        })
+                    }
+                );
+
+                const data = await response.json();
+
+                if (!response.ok || data.error) {
+                    throw new Error(
+                        data.error || "Analysis failed"
+                    );
+                }
+
+                result.className = "success";
+
+                result.innerHTML = `
+                    <strong>🍽 Food:</strong>
+                    ${escapeHtml(String(data.food))}<br>
+
+                    <strong>🔥 Calories:</strong>
+                    ${escapeHtml(String(data.calories))}
+                    kcal<br>
+
+                    <strong>💪 Protein:</strong>
+                    ${escapeHtml(String(data.protein))}
+                    g<br>
+
+                    <strong>🍞 Carbohydrates:</strong>
+                    ${escapeHtml(String(data.carbs))}
+                    g<br>
+
+                    <strong>🧈 Fat:</strong>
+                    ${escapeHtml(String(data.fat))}
+                    g<br>
+
+                    <strong>🌾 Fiber:</strong>
+                    ${escapeHtml(String(data.fiber))}
+                    g
+                `;
+            } catch (error) {
+                showError(error.message);
+            } finally {
+                analyzeButton.disabled = false;
+                analyzeButton.textContent = "Analyze Food";
+            }
+        }
+
+        function showError(message) {
+            result.className = "error";
+            result.textContent = "❌ " + message;
+        }
+
+        function escapeHtml(value) {
+            return value
+                .replaceAll("&", "&amp;")
+                .replaceAll("<", "&lt;")
+                .replaceAll(">", "&gt;")
+                .replaceAll('"', "&quot;")
+                .replaceAll("'", "&#039;");
+        }
+    </script>
+</body>
+</html>
